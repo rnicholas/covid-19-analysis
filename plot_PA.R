@@ -6,6 +6,12 @@
 rm(list=ls())
 graphics.off()
 
+# Length (days) for moving averages; should be an odd number.
+n <- 7
+
+# Number of days at the beginning of timeseries to skip when plotting.
+dskip <- 40
+
 # Read in US data from JHU dataset. Make sure you've first done a 'git pull'
 # to grab the most recent version (updated multiple times daily).
 ts_path <- '../COVID-19/csse_covid_19_data/csse_covid_19_time_series/'
@@ -30,14 +36,21 @@ aggregate_population <- sum(subset_population)
 l <- length(aggregate_cases)
 
 dtd_aggregate_cases <- aggregate_cases[2:l] - aggregate_cases[1:l-1]
+cx <- c(0,cumsum(dtd_aggregate_cases))
+dac_smooth <- (cx[(n+1):length(cx)] - cx[1:(length(cx) - n)]) / n
+
 dtd_aggregate_deaths <- aggregate_deaths[2:l] - aggregate_deaths[1:l-1]
+cx <- c(0,cumsum(dtd_aggregate_deaths))
+dad_smooth <- (cx[(n+1):length(cx)] - cx[1:(length(cx) - n)]) / n
 
 # Plot state cases and deaths.
-plot(dtd_aggregate_cases[-(1:40)], xlab="days since 3/1/2020", ylab="new cases", main="COVID-19 in Pennsylvania", pch=16, col="blue", type="o")
+plot(dtd_aggregate_cases[-(1:dskip)], xlab="days since 3/1/2020", ylab="new cases", main="COVID-19 in Pennsylvania", pch=16, col="blue", type="p")
 grid()
+lines(dac_smooth[-(1:(dskip-((n-1)/2)))],col="blue")
 x11()
-plot(dtd_aggregate_deaths[-(1:40)], xlab="days since 3/1/2020", ylab="deaths", main="COVID-19 in Pennsylvania", pch=16, col="dark red", type="o")
+plot(dtd_aggregate_deaths[-(1:dskip)], xlab="days since 3/1/2020", ylab="deaths", main="COVID-19 in Pennsylvania", pch=16, col="dark red", type="p")
 grid()
+lines(dad_smooth[-(1:(dskip-((n-1)/2)))],col="red")
 
 # Plot Centre County cases and deaths.
 locality_row <- which(subset_ids == "Centre")
