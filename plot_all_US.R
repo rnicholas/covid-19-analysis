@@ -1,6 +1,6 @@
 # Create plots of various COVID-19 stats for all PA counties.
 #
-# Last modified 3 May 2020 by Rob Nicholas <rob.nicholas@gmail.com>.
+# Last modified 8 May 2020 by Rob Nicholas <rob.nicholas@gmail.com>.
 
 # Clear the environment and close all existing plots.
 rm(list=ls())
@@ -9,36 +9,46 @@ graphics.off()
 # Number of days at the beginning of timeseries to skip when plotting.
 dskip <- 40
 
-# Define a function for a running mean of a vector. This is a "centered"
-# mean with a default window of 7. If you change the window length, you'll
+# Define a function for a running mean of a vector.  This is a "centered"
+# mean with a default window of 7.  If you change the window length, you'll
 # want this to be an odd number (though this isn't strictly enforced).
+#
+# !! PLEASE DO NOT USE THIS FUNCTION -- IT IS NOT CORRECTLY IMPLEMENTED !!
+#
 csmooth <- function( ts, nn=7 )
 {
   cx <- c(0,cumsum(ts))
   cx_smooth <- ( cx[(nn+1):length(cx)] - cx[1:(length(cx) - nn)] ) / nn
-  cts <- vector( NA, length(ts) )
+  cts <- rep(NA,length(ts))
   nns <- floor(nn/2)
-  cts[nns+1,length(ts)-nns]
-  return(cts)
-}
-
-# Calculate position-to-position changes in the values of a vector. Used to
-# determine new daily cases and deaths since the JHU data are cumulative.
-uncum <- function( ts )
-{
-  uts <- ts[2,length(ts)] - ts[1:length(ts)-1]
-  uts <- c(ts[1],uts)
-  return(uts)
+  cts[(nns+1):(length(ts)-nns)] <- cx_smooth
+return(cts)
 }
 
 # Define a function for a running mean of a vector. This is a "trailing"
 # mean with a default window of 7.
 tsmooth <- function( ts, nn=7 )
 {
+  tx <- c(0,cumsum(ts))
+  tx_smooth <- ( tx[(nn+1):length(tx)] - tx[1:(length(tx) - nn)] ) / nn
   tts <- rep(NA,length(ts))
-  
-  return(tts)
+  tts[nn:length(ts)] <- tx_smooth
+return(tts)
 }
+
+# Calculate position-to-position changes in the values of a vector.  Used to
+# determine new daily cases and deaths since the JHU data are cumulative. 
+# Negative values are set to zero; this allows us to ignore some apparent
+# errors in the dataset where cumulative cases or deaths occasionally
+# decrease on a given day.
+uncum <- function( ts )
+{
+  uts <- ts[2:length(ts)] - ts[1:length(ts)-1]
+  uts <- c(ts[1],uts)
+  uts[uts<0] <- 0
+  return(uts)
+}
+
 
 
 # Read in US data from JHU dataset. Make sure you've first done a 'git pull'
@@ -68,16 +78,17 @@ for( state in state_list )
   cum_state_deaths <- colSums(state_deaths)
   cum_state_population <- sum(state_population)
   l <- length(cum_state_cases)
+  day <- seq( from=as.Date("2020-01-22"), by="days", length.out=l )
 
   # Plot state cases.
   new_state_cases <- uncum(cum_state_cases)
-  plot( new_state_cases[-(1:dskip)], xlab="days since 3/1/2020", ylab="new cases", main="COVID-19 Cases in", pch=16, col="blue", type="p" )
+  plot( day[-(1:dskip)], new_state_cases[-(1:dskip)], xlab="date", ylab="new cases", main=paste(state,": COVID-19 Cases",sep=""), pch=16, col="blue", type="p" )
   grid()
-  lines( csmooth(new_state_cases)[-(1:(dskip)], col="blue" )
+  lines( day[-(1:dskip)], tsmooth(new_state_cases)[-(1:(dskip))], col="blue" )
 
   # Plot state deaths.
   new_state_deaths <- uncum(cum_state_deaths)
-  plot( new_state_deaths[-(1:dskip)], xlab="days since 3/1/2020", ylab="deaths", main="COVID-19 Deaths in", pch=16, col="red", type="p" )
+  plot( day[-(1:dskip)], new_state_deaths[-(1:dskip)], xlab="date", ylab="deaths", main=paste(state,": COVID-19 Deaths",sep=""), pch=16, col="red", type="p" )
   grid()
-  lines( csmooth(new_state_deaths)[-(1:(dskip)], col="red" )
+  lines( day[-(1:dskip)], tsmooth(new_state_deaths)[-(1:(dskip))], col="red" )
 }
