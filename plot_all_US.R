@@ -9,6 +9,9 @@ graphics.off()
 # Number of days at the beginning of timeseries to skip when plotting.
 dskip <- 40
 
+# "States" to exclude.
+exclude_states <- c("American Samoa","Guam","Northern Mariana Islands","Diamond Princess","Grand Princess")
+
 # Define a function for a running mean of a vector.  This is a "centered"
 # mean with a default window of 7.  If you change the window length, you'll
 # want this to be an odd number (though this isn't strictly enforced).
@@ -59,6 +62,7 @@ us_deaths <- read.csv(paste(ts_path,'time_series_covid19_deaths_US.csv',sep=""))
 
 # Extract list of states, territories, and cruise ships (!) loop over each.
 state_list <- unique( us_cases[,7] )
+state_list <- state_list[ !(state_list %in% exclude_states) ]
 for( state in state_list )
 {
 
@@ -79,12 +83,15 @@ for( state in state_list )
   cum_state_population <- sum(state_population)
   l <- length(cum_state_cases)
   day <- seq( from=as.Date("2020-01-22"), by="days", length.out=l )
-
+  
   # Plot state cases.
   new_state_cases <- uncum(cum_state_cases)
+  100*lm( new_state_cases[(l-13):l] ~ seq(1,14) )$coefficients[2]*14/mean(new_state_cases[(l-20):(l-14)])
+  
   plot( day[-(1:dskip)], new_state_cases[-(1:dskip)], xlab="date", ylab="new cases", main=paste(state,": COVID-19 Cases",sep=""), pch=16, col="blue", type="p" )
   grid()
   lines( day[-(1:dskip)], tsmooth(new_state_cases)[-(1:(dskip))], col="blue" )
+  
 
   # Plot state deaths.
   new_state_deaths <- uncum(cum_state_deaths)
