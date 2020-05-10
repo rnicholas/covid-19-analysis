@@ -11,6 +11,13 @@ dskip <- 40
 
 # "States" to exclude.
 exclude_states <- c("American Samoa","Guam","Northern Mariana Islands","Diamond Princess","Grand Princess")
+exlude_localities <- c("Out of ")
+# Function to write text into the corner of a plot, inside the plot frame.
+# Defaults to upper left but position can be specified.
+ctext <- function(text, location="topleft")
+{
+  legend(location,legend=text, bty ="n", pch=NA) 
+}
 
 # Define a function for a running mean of a vector.  This is a "centered"
 # mean with a default window of 7.  If you change the window length, you'll
@@ -86,16 +93,45 @@ for( state in state_list )
   
   # Plot state cases.
   new_state_cases <- uncum(cum_state_cases)
-  100*lm( new_state_cases[(l-13):l] ~ seq(1,14) )$coefficients[2]*14/mean(new_state_cases[(l-20):(l-14)])
-  
-  plot( day[-(1:dskip)], new_state_cases[-(1:dskip)], xlab="date", ylab="new cases", main=paste(state,": COVID-19 Cases",sep=""), pch=16, col="blue", type="p" )
+  # rtrend <- 100*lm( new_state_cases[(l-13):l] ~ seq(1,14) )$coefficients[2]*14/mean(new_state_cases[(l-20):(l-14)])
+  twca <- sum(new_state_cases[(l-13):l])/(cum_state_population/100000)
+  plot( day[-(1:dskip)], new_state_cases[-(1:dskip)], xlab="", ylab="new cases", main=paste(state,": COVID-19 Cases as of ",day[l],sep=""), pch=16, col="blue", type="p" )
   grid()
   lines( day[-(1:dskip)], tsmooth(new_state_cases)[-(1:(dskip))], col="blue" )
+  #ctext(paste(sprintf("%+0.1f",rtrend),"%",sep=""))
+  ctext(paste(sprintf("%0.1f",twca),"cases per 100k over past 14 days"))
   
 
   # Plot state deaths.
   new_state_deaths <- uncum(cum_state_deaths)
-  plot( day[-(1:dskip)], new_state_deaths[-(1:dskip)], xlab="date", ylab="deaths", main=paste(state,": COVID-19 Deaths",sep=""), pch=16, col="red", type="p" )
+  # rtrend <- 100*lm( new_state_deaths[(l-13):l] ~ seq(1,14) )$coefficients[2]*14/mean(new_state_deaths[(l-20):(l-14)])
+  twda <- sum(new_state_deaths[(l-13):l])/(cum_state_population/1000000)
+  plot( day[-(1:dskip)], new_state_deaths[-(1:dskip)], xlab="", ylab="deaths", main=paste(state,": COVID-19 Deaths as of ",day[l],sep=""), pch=16, col="red", type="p" )
   grid()
   lines( day[-(1:dskip)], tsmooth(new_state_deaths)[-(1:(dskip))], col="red" )
+  #ctext(paste(sprintf("%+0.1f",rtrend),"%",sep=""))
+  ctext(paste(sprintf("%0.1f",twda),"deaths per million over past 14 days"))
+
+  # locality_list <- state_ids[1:(length(state_ids)-2)]
+  locality_list <- state_ids
+  for(locality in locality_list)
+  {
+    locality_row <- which( locality_list == locality )
+    print(locality)
+  }  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 }
