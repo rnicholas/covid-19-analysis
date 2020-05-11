@@ -10,14 +10,17 @@ graphics.off()
 dskip <- 40
 
 # "States" to exclude.
-exclude_states <- c("American Samoa","Guam","Northern Mariana Islands","Diamond Princess","Grand Princess")
-exlude_localities <- c("Out of ")
+excluded_states <- c("American Samoa","Guam","Northern Mariana Islands","Diamond Princess","Grand Princess")
+excluded_localities <- c("Out of","Unassigned","Bear River","TriCounty","Weber-Morgan","Central Utah","Southeast Utah","Southwest Utah")
+
+
 # Function to write text into the corner of a plot, inside the plot frame.
 # Defaults to upper left but position can be specified.
 ctext <- function(text, location="topleft")
 {
   legend(location,legend=text, bty ="n", pch=NA) 
 }
+
 
 # Define a function for a running mean of a vector.  This is a "centered"
 # mean with a default window of 7.  If you change the window length, you'll
@@ -59,6 +62,25 @@ uncum <- function( ts )
   return(uts)
 }
 
+# Vector grep: Extend basic usage of grep function to allow a string vector rather than
+# just a single string to be passed as the pattern.
+vgrep <- function( vp, xx, ignore_case=FALSE, invert_match=FALSE, return_vector=FALSE )
+{
+  mpos <- NULL
+  for( sp in vp)
+  {
+    mpos <- c( mpos, grep( sp, xx, ignore.case=ignore_case ) )
+  }
+  if( invert_match )
+  {
+    vpos <- 1:length(xx)
+    vpos <- vpos[ !vpos %in% mpos ]
+  }
+  else { vpos <- mpos }
+  if( return_vector ){ vgrep_ret <- xx[vpos] }
+  else { vgrep_ret <- vpos }
+  return(vgrep_ret)
+}
 
 
 # Read in US data from JHU dataset. Make sure you've first done a 'git pull'
@@ -69,7 +91,7 @@ us_deaths <- read.csv(paste(ts_path,'time_series_covid19_deaths_US.csv',sep=""))
 
 # Extract list of states, territories, and cruise ships (!) loop over each.
 state_list <- unique( us_cases[,7] )
-state_list <- state_list[ !(state_list %in% exclude_states) ]
+state_list <- state_list[ !(state_list %in% excluded_states) ]
 for( state in state_list )
 {
 
@@ -112,14 +134,19 @@ for( state in state_list )
   #ctext(paste(sprintf("%+0.1f",rtrend),"%",sep=""))
   ctext(paste(sprintf("%0.1f",twda),"deaths per million over past 14 days"))
 
-  # locality_list <- state_ids[1:(length(state_ids)-2)]
-  locality_list <- state_ids
-  for(locality in locality_list)
+  if( length(state_ids) > 3 )
   {
-    locality_row <- which( locality_list == locality )
-    print(locality)
+    locality_list <- state_ids[ vgrep( excluded_localities, state_ids, invert_match=TRUE ) ]
+    # We need to use vgrep() instead of the following because it doesn't match substrings.
+    # locality_list <- state_ids[ !(state_ids %in% excluded_localities) ]
+    for(locality in locality_list)
+    {
+      locality_row <- which( locality_list == locality )
+      print(paste(locality,", ",state,sep=""))
+      
+    }  
   }  
-  
+
   
   
   
