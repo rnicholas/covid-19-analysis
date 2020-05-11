@@ -30,7 +30,7 @@ ctext <- function(text, location="topleft")
 #
 csmooth <- function( ts, nn=7 )
 {
-  cx <- c(0,cumsum(ts))
+  cx <- c(0,cumsum(as.vector(ts)))
   cx_smooth <- ( cx[(nn+1):length(cx)] - cx[1:(length(cx) - nn)] ) / nn
   cts <- rep(NA,length(ts))
   nns <- floor(nn/2)
@@ -42,7 +42,7 @@ return(cts)
 # mean with a default window of 7.
 tsmooth <- function( ts, nn=7 )
 {
-  tx <- c(0,cumsum(ts))
+  tx <- c(0,cumsum(as.vector(ts)))
   tx_smooth <- ( tx[(nn+1):length(tx)] - tx[1:(length(tx) - nn)] ) / nn
   tts <- rep(NA,length(ts))
   tts[nn:length(ts)] <- tx_smooth
@@ -92,9 +92,18 @@ us_deaths <- read.csv(paste(ts_path,'time_series_covid19_deaths_US.csv',sep=""))
 # Extract list of states, territories, and cruise ships (!) loop over each.
 state_list <- unique( us_cases[,7] )
 state_list <- state_list[ !(state_list %in% excluded_states) ]
+##
+## a shorter list of states for testing
+## state_list <- c("Kansas","Pennsylvania")
+##
+pdf("us_covid_atlas.pdf")
 for( state in state_list )
 {
 
+  print("")
+  print(state)
+  print("===============")
+  
   # Identify and select those rows with data for locations in the state or
   # territory (usually counties).  We assume that the structure of the
   # datasets for cases and deaths is identical, i.e.  the locations match
@@ -121,28 +130,57 @@ for( state in state_list )
   grid()
   lines( day[-(1:dskip)], tsmooth(new_state_cases)[-(1:(dskip))], col="blue" )
   #ctext(paste(sprintf("%+0.1f",rtrend),"%",sep=""))
-  ctext(paste(sprintf("%0.1f",twca),"cases per 100k over past 14 days"))
+  ctext(paste(sprintf("%0.1f",twca)," cases per 100k over past 14 days\n\n",format(cum_state_cases[l],big.mark=",")," total cases since March 1st\npopulation ",format(cum_state_population,big.mark=","),sep=""))
   
-
   # Plot state deaths.
   new_state_deaths <- uncum(cum_state_deaths)
   # rtrend <- 100*lm( new_state_deaths[(l-13):l] ~ seq(1,14) )$coefficients[2]*14/mean(new_state_deaths[(l-20):(l-14)])
-  twda <- sum(new_state_deaths[(l-13):l])/(cum_state_population/1000000)
+  twda <- sum(new_state_deaths[(l-13):l])/(cum_state_population/100000)
   plot( day[-(1:dskip)], new_state_deaths[-(1:dskip)], xlab="", ylab="deaths", main=paste(state,": COVID-19 Deaths as of ",day[l],sep=""), pch=16, col="red", type="p" )
   grid()
   lines( day[-(1:dskip)], tsmooth(new_state_deaths)[-(1:(dskip))], col="red" )
   #ctext(paste(sprintf("%+0.1f",rtrend),"%",sep=""))
-  ctext(paste(sprintf("%0.1f",twda),"deaths per million over past 14 days"))
-
+  # ctext(paste(sprintf("%0.1f",twda),"deaths per 100k over past 14 days"))
+  ctext(paste(sprintf("%0.1f",twda)," deaths per 100k over past 14 days\n\n",format(cum_state_deaths[l],big.mark=",")," total deaths since March 1st\npopulation ",format(cum_state_population,big.mark=","),sep=""))
+  
+  # States generally have separate rows for each county or parish, plus rows for "Out of XX"
+  # and "Unassigned"; thus anything with more than 3 rows has counties or other localities
+  # which we plot separately here. The "Out of XX" and "Unassigned" categories are all zeros
+  # for many states and are typically small otherwise, so we don't bother to plot (but they
+  # WERE included in the state totals above).
+  #
   if( length(state_ids) > 3 )
   {
     locality_list <- state_ids[ vgrep( excluded_localities, state_ids, invert_match=TRUE ) ]
     # We need to use vgrep() instead of the following because it doesn't match substrings.
     # locality_list <- state_ids[ !(state_ids %in% excluded_localities) ]
+    #
     for(locality in locality_list)
     {
       locality_row <- which( locality_list == locality )
       print(paste(locality,", ",state,sep=""))
+
+      locality_cases <- unlist(state_cases[locality_row,])
+      locality_deaths <- unlist(state_deaths[locality_row,])
+      locality_population <- state_population[locality_row]
+      
+      # Plot locality cases.
+      new_locality_cases <- uncum(locality_cases)
+      twca <- sum(new_locality_cases[(l-13):l])/(locality_population/100000)
+      plot( day[-(1:dskip)], new_locality_cases[-(1:dskip)], xlab="", ylab="new cases", main=paste(locality,", ",state,": COVID-19 Cases as of ",day[l],sep=""), pch=16, col="blue", type="p" )
+      grid()
+      lines( day[-(1:dskip)], tsmooth(new_locality_cases)[-(1:(dskip))], col="blue" )
+      #ctext(paste(sprintf("%0.1f",twca),"cases per 100k over past 14 days"))
+      ctext(paste(sprintf("%0.1f",twca)," cases per 100k over past 14 days\n\n",format(locality_cases[l],big.mark=",")," total cases since March 1st\npopulation ",format(locality_population,big.mark=","),sep=""))
+      
+      # Plot locality deaths.
+      new_locality_deaths <- uncum(locality_deaths)
+      twda <- sum(new_locality_deaths[(l-13):l])/(locality_population/100000)
+      plot( day[-(1:dskip)], new_locality_deaths[-(1:dskip)], xlab="", ylab="deaths", main=paste(locality,", ",state,": COVID-19 Deaths as of ",day[l],sep=""), pch=16, col="red", type="p" )
+      grid()
+      lines( day[-(1:dskip)], tsmooth(new_locality_deaths)[-(1:(dskip))], col="red" )
+      #ctext(paste(sprintf("%0.1f",twda),"deaths per 100k over past 14 days"))
+      ctext(paste(sprintf("%0.1f",twda)," deaths per 100k over past 14 days\n\n",format(locality_deaths[l],big.mark=",")," total deaths since March 1st\npopulation ",format(locality_population,big.mark=","),sep=""))
       
     }  
   }  

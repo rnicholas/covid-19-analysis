@@ -41,4 +41,4 @@ vignettes/*.pdf
 # JOE backup files
 *~
 
-Rplots.pdf
+*.pdf
