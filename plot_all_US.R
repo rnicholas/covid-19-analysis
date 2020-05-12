@@ -121,6 +121,8 @@ for( state in state_list )
   cum_state_population <- sum(state_population)
   l <- length(cum_state_cases)
   day <- seq( from=as.Date("2020-01-22"), by="days", length.out=l )
+  begday <- format(as.Date(day[dskip]),"%B %-e")
+  repday <- format(as.Date(day[l]),"%B %-e")
   
   # Plot state cases.
   new_state_cases <- uncum(cum_state_cases)
